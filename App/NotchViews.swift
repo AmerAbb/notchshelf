@@ -253,15 +253,18 @@ struct ThumbnailCell: View {
     let item: ShelfItem
     @Bindable var model: NotchModel
     @State private var captionHovered = false
+    /// Lags the pointer slightly on the way out, so crossing from the
+    /// thumbnail to the caption's buttons doesn't flick them off and on.
+    @State private var showControls = false
+    @State private var hideTask: Task<Void, Never>?
 
     private var size: CGSize { NotchModel.cellSize }
 
     var body: some View {
         let selected = model.selection.contains(item.id)
         let hovered = model.hoveredID == item.id
-        let showControls = hovered || captionHovered
 
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 0) {
             ZStack {
                 thumbnail
                 badges
@@ -281,34 +284,72 @@ struct ThumbnailCell: View {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .strokeBorder(selected ? Color.accentColor : Color.white.opacity(0.14), lineWidth: selected ? 2.5 : 1)
             )
-            .overlay(ItemInteraction(item: item, model: model))
             .scaleEffect(hovered ? 1.04 : 1)
             .animation(.easeOut(duration: 0.12), value: hovered)
             .animation(.easeOut(duration: 0.15), value: model.flashID)
+            // Outside the scale, so the AppKit view tracking the pointer keeps
+            // a fixed frame while the thumbnail grows under it.
+            .overlay(ItemInteraction(item: item, model: model))
+
+            captionRow
+                // The gap above belongs to the caption, so there's no dead
+                // strip between the thumbnail and the buttons.
+                .padding(.top, 5)
+                .frame(width: size.width, height: 19)
+                .contentShape(Rectangle())
+                .onHover { captionHovered = $0 }
+        }
+        .onChange(of: hovered || captionHovered, initial: true) { _, active in
+            hideTask?.cancel()
+            if active {
+                showControls = true
+            } else {
+                hideTask = Task {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    guard !Task.isCancelled else { return }
+                    showControls = false
+                }
+            }
+        }
+    }
+
+    /// The time (or file name) with the item's buttons laid over its end.
+    /// The text keeps the same width whether or not the buttons show, so
+    /// hovering never makes it re-truncate and jump.
+    private var captionRow: some View {
+        ZStack(alignment: .trailing) {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                Text(caption(now: context.date))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // A pinned item always shows its pin; leave it room.
+                    .padding(.trailing, item.pinned ? 20 : 0)
+            }
 
             HStack(spacing: 7) {
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    Text(caption(now: context.date))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                Spacer(minLength: 0)
-                if showControls || item.pinned {
-                    CellButton(symbol: item.pinned ? "pin.fill" : "pin", help: item.pinned ? "Unpin" : "Pin: keep past today") {
-                        model.togglePin(item)
-                    }
-                }
                 if showControls {
                     if item.kind == .image {
                         CellButton(symbol: "checkerboard.rectangle", help: "Blur part of it") { model.onRedact?(item) }
                     }
                     CellButton(symbol: "xmark", help: "Remove") { model.remove([item]) }
                 }
+                if showControls || item.pinned {
+                    CellButton(symbol: item.pinned ? "pin.fill" : "pin", help: item.pinned ? "Unpin" : "Pin: keep past today") {
+                        model.togglePin(item)
+                    }
+                }
             }
-            .frame(width: size.width, height: 14)
-            .onHover { captionHovered = $0 }
+            .padding(.leading, 22)
+            .background {
+                // Fade the end of a long name out under the buttons.
+                LinearGradient(stops: [.init(color: .black.opacity(0), location: 0), .init(color: .black, location: 0.35)],
+                               startPoint: .leading, endPoint: .trailing)
+                    .opacity(showControls ? 1 : 0)
+            }
+            .animation(.easeOut(duration: 0.12), value: showControls)
         }
     }
 

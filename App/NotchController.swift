@@ -264,6 +264,9 @@ final class NotchController: NSObject {
         panel.sharingType = .readOnly
         switch mode {
         case "expanded": showShelf()
+        case "hover":
+            showShelf()
+            model.hoveredID = model.items.first?.id
         case "peek": if let item = model.items.first { model.peek(item, label: "Shelved") }
         case "collapse":
             // Open, then close after a second; snapshotDelay counts from the close.
