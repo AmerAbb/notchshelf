@@ -70,6 +70,39 @@ public final class ShelfStore {
         return insert(ShelfItem(fileName: name, addedAt: now(), source: .dropped))
     }
 
+    /// The shelf item a dropped file already is, or duplicates.
+    ///
+    /// Two cases: an item dragged out of the shelf and dropped straight back
+    /// (a change of mind mid-drag), and a copy of one that went somewhere
+    /// else first, say the Desktop, and came back. Either way the shelf
+    /// shouldn't gain a second copy.
+    public func existingItem(matching url: URL) -> ShelfItem? {
+        // Drags hand over file *reference* URLs (/.file/id=…); turn those
+        // back into real paths before comparing.
+        let resolved = ((url as NSURL).filePathURL ?? url).resolvingSymlinksInPath().standardizedFileURL
+        let shelfPath = directory.resolvingSymlinksInPath().standardizedFileURL.path
+        if resolved.deletingLastPathComponent().path == shelfPath {
+            return items.first { $0.fileName == resolved.lastPathComponent }
+        }
+        guard let size = fileSize(resolved) else { return nil }
+        return items.first { item in
+            let candidate = self.url(for: item)
+            return fileSize(candidate) == size && fileManager.contentsEqual(atPath: candidate.path, andPath: resolved.path)
+        }
+    }
+
+    /// The shelf item whose file holds exactly these bytes, if any.
+    public func existingItem(matching data: Data) -> ShelfItem? {
+        items.first { item in
+            let candidate = url(for: item)
+            return fileSize(candidate) == data.count && (try? Data(contentsOf: candidate)) == data
+        }
+    }
+
+    private func fileSize(_ url: URL) -> Int? {
+        (try? fileManager.attributesOfItem(atPath: url.path))?[.size] as? Int
+    }
+
     private func insert(_ item: ShelfItem) -> ShelfItem {
         items.insert(item, at: 0)
         save()

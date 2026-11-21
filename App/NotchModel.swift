@@ -30,7 +30,8 @@ final class NotchModel {
     var flashText = ""
     var isDropTargeted = false
 
-    @ObservationIgnored var isDraggingOut = false
+    /// One of our own items is being dragged out (the shelf stays open).
+    var isDraggingOut = false
     @ObservationIgnored var onQuickLook: (() -> Void)?
     @ObservationIgnored var onRedact: ((ShelfItem) -> Void)?
     @ObservationIgnored private var peekTask: Task<Void, Never>?
@@ -172,7 +173,7 @@ final class NotchModel {
                           let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])
                     else { return }
                     DispatchQueue.main.async {
-                        MainActor.assumeIsolated { _ = try? self.store.ingest(data: png, suggestedName: "Dropped image.png") }
+                        MainActor.assumeIsolated { self.park(png) }
                     }
                 }
             }
@@ -180,10 +181,23 @@ final class NotchModel {
         return accepted
     }
 
+    /// Dropping something that's already on the shelf (an item dragged out
+    /// and straight back, or a copy of one) doesn't add it again; the item
+    /// that's there says so instead.
     private func park(_ url: URL) {
-        // Dragging a shelf item back onto the shelf shouldn't duplicate it.
-        guard !url.standardizedFileURL.path.hasPrefix(store.directory.standardizedFileURL.path) else { return }
+        if let existing = store.existingItem(matching: url) {
+            flash([existing], "Already here")
+            return
+        }
         _ = try? store.ingest(fileAt: url, as: .dropped, move: false)
+    }
+
+    private func park(_ png: Data) {
+        if let existing = store.existingItem(matching: png) {
+            flash([existing], "Already here")
+            return
+        }
+        _ = try? store.ingest(data: png, suggestedName: "Dropped image.png")
     }
 
     // MARK: Context menu

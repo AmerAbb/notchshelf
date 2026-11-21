@@ -132,6 +132,28 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: store.url(for: replaced!), encoding: .utf8), "z")
     }
 
+    func testAnItemDraggedBackIsRecognised() throws {
+        let store = makeStore()
+        let item = try store.ingest(fileAt: try makeFile("shot.png"), as: .screenshot, move: true)
+        let url = store.url(for: item)
+
+        XCTAssertEqual(store.existingItem(matching: url)?.id, item.id)
+        // What a drag actually delivers: a file reference URL.
+        let reference = try XCTUnwrap((url as NSURL).fileReferenceURL())
+        XCTAssertEqual(store.existingItem(matching: reference)?.id, item.id)
+    }
+
+    func testAnIdenticalCopyFromElsewhereIsRecognised() throws {
+        let store = makeStore()
+        let item = try store.ingest(fileAt: try makeFile("shot.png", contents: "pixels"), as: .screenshot, move: true)
+
+        XCTAssertEqual(store.existingItem(matching: try makeFile("copy on desktop.png", contents: "pixels"))?.id, item.id)
+        XCTAssertNil(store.existingItem(matching: try makeFile("other.png", contents: "pixelz")), "same size, different bytes")
+        XCTAssertNil(store.existingItem(matching: try makeFile("bigger.png", contents: "more pixels")))
+        XCTAssertEqual(store.existingItem(matching: Data("pixels".utf8))?.id, item.id)
+        XCTAssertNil(store.existingItem(matching: Data("nope".utf8)))
+    }
+
     func testRelativeTime() {
         let now = date("2026-11-21 10:00")
         XCTAssertEqual(RelativeTime.short(now.addingTimeInterval(-10), now: now), "now")

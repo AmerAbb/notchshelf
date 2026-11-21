@@ -170,7 +170,10 @@ struct ShelfView: View {
                         .fill(Color.white.opacity(0.06))
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .strokeBorder(Color.white.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                    Label("Drop to park it until tomorrow", systemImage: "tray.and.arrow.down")
+                    Label(
+                        model.isDraggingOut ? "Drop to put it back" : "Drop to park it until tomorrow",
+                        systemImage: model.isDraggingOut ? "arrow.uturn.backward" : "tray.and.arrow.down"
+                    )
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                 }
