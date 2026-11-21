@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # Same runner as Dictation: the Xcode 27 SDK.
+    runs-on: xcode-27
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the update key is configured
+        run: |
+          if grep -q 'REPLACE_WITH_PUBLIC_ED_KEY' project.yml; then
+            echo "::error::Set SUPublicEDKey in project.yml first (README → Releasing)."
+            exit 1
+          fi
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Test
+        run: cd ShelfCore && swift test
+
+      - name: Build
+        env:
+          # Ad-hoc, like Dictation's CI builds. Sparkle verifies updates with
+          # its own EdDSA signature, not the code signature.
+          NOTCHSHELF_SIGN_IDENTITY: "-"
+        run: ./scripts/build.sh
+
+      - name: Zip app
+        # ditto, not zip -r: it keeps the symlinks inside Sparkle.framework,
+        # which a plain zip would flatten and so break the signature.
+        run: ditto -c -k --sequesterRsrc --keepParent notchshelf.app notchshelf.zip
+
+      - name: Download Sparkle tools
+        run: |
+          curl -sL https://github.com/sparkle-project/Sparkle/releases/download/2.9.0/Sparkle-2.9.0.tar.xz | tar xJ -C /tmp
+
+      - name: Generate appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          mkdir -p appcast_dir
+          cp notchshelf.zip appcast_dir/
+          echo "$SPARKLE_PRIVATE_KEY" | /tmp/bin/generate_appcast \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" \
+            appcast_dir
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            notchshelf.zip \
+            appcast_dir/appcast.xml \
+            --title "${{ github.ref_name }}" \
+            --generate-notes

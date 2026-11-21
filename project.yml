@@ -1,0 +1,56 @@
+name: notchshelf
+options:
+  bundleIdPrefix: com.amerabb
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "27.0"
+
+packages:
+  ShelfCore:
+    path: ShelfCore
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.0"
+
+targets:
+  notchshelf:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+    info:
+      path: Info.plist
+      properties:
+        CFBundleName: notchshelf
+        CFBundleDisplayName: notchshelf
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.utilities
+        NSDesktopFolderUsageDescription: "notchshelf watches your Desktop for new iOS Simulator screenshots so they land on the shelf."
+        SUFeedURL: "https://github.com/amerabb/notchshelf/releases/latest/download/appcast.xml"
+        # Public half of the Sparkle update-signing key. The private half is in
+        # the maintainer's login keychain (generate_keys --account notchshelf)
+        # and in the repo's SPARKLE_PRIVATE_KEY secret for CI.
+        SUPublicEDKey: "fO1kjPRRgXxBzObpUaTqks+IAin6P7PusCzoDtEGUvY="
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
+    entitlements:
+      path: notchshelf.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+    settings:
+      base:
+        SWIFT_VERSION: "5"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "0.1.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.amerabb.notchshelf
+        PRODUCT_NAME: notchshelf
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        # Signing happens afterwards in scripts/build.sh, the same way locally
+        # and in CI, so Sparkle's nested helpers get signed in the right order.
+        CODE_SIGNING_ALLOWED: NO
+    dependencies:
+      - package: ShelfCore
+      - package: Sparkle
