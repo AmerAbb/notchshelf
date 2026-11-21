@@ -183,11 +183,23 @@ final class NotchController: NSObject {
         openedFromMenu = false
         suppressUntilPointerLeaves = byHand
         panel.ignoresMouseEvents = true
-        if panel.isKeyWindow {
-            // Hand keyboard focus back to the app you were in. Ordering a
-            // non-activating panel out and back in is the reliable way.
-            panel.orderOut(nil)
-            panel.orderFrontRegardless()
+        returnKeyFocusAfterAnimation()
+    }
+
+    /// Hands keyboard focus back to the app you were in. Ordering a
+    /// non-activating panel out and back in is the reliable way, but doing it
+    /// straight away hides the window mid-animation and the shelf just
+    /// vanishes, so wait for the shrink to finish first.
+    private func returnKeyFocusAfterAnimation() {
+        guard panel.isKeyWindow else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.model.mode != .expanded, self.panel.isKeyWindow,
+                      !self.isQuickLookVisible
+                else { return }
+                self.panel.orderOut(nil)
+                self.panel.orderFrontRegardless()
+            }
         }
     }
 
@@ -253,6 +265,12 @@ final class NotchController: NSObject {
         switch mode {
         case "expanded": showShelf()
         case "peek": if let item = model.items.first { model.peek(item, label: "Shelved") }
+        case "collapse":
+            // Open, then close after a second; snapshotDelay counts from the close.
+            showShelf()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                MainActor.assumeIsolated { self?.collapse() }
+            }
         default: break
         }
         // `-snapshotPath <png>`: render the panel to a file once the animation
@@ -260,7 +278,8 @@ final class NotchController: NSObject {
         // permission.
         if let path = UserDefaults.standard.string(forKey: "snapshotPath") {
             let defaults = UserDefaults.standard
-            let delay = defaults.object(forKey: "snapshotDelay") == nil ? 1.2 : defaults.double(forKey: "snapshotDelay")
+            var delay = defaults.object(forKey: "snapshotDelay") == nil ? 1.2 : defaults.double(forKey: "snapshotDelay")
+            if mode == "collapse" { delay += 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 MainActor.assumeIsolated {
                     self?.snapshot(to: path)

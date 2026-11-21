@@ -36,6 +36,9 @@ struct NotchRootView: View {
     /// The black shape grows out of the notch; content follows once there is
     /// room for it, and leaves first on the way back.
     private static let grow = Animation.spring(response: 0.42, dampingFraction: 0.78)
+    /// Closing is quicker and doesn't bounce: it should settle back into the
+    /// notch, not wobble.
+    private static let shrink = Animation.spring(response: 0.32, dampingFraction: 0.95)
     private static let contentIn = AnyTransition.opacity
         .combined(with: .scale(scale: 0.94, anchor: .top))
         .combined(with: .offset(y: -6))
@@ -71,7 +74,7 @@ struct NotchRootView: View {
             .clipShape(shape)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(Self.grow, value: model.mode)
+        .animation(model.mode == .hidden ? Self.shrink : Self.grow, value: model.mode)
         .environment(\.colorScheme, .dark)
     }
 
