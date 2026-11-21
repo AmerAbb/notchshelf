@@ -19,11 +19,13 @@ final class NotchPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        // Above the menu bar, so the shelf can draw over it.
+        // Above the menu bar, so the shelf can grow out of the real notch.
+        // (Don't set isFloatingPanel: it quietly resets the level to
+        // .floating, which macOS keeps below the menu bar, and the shelf
+        // then hangs under the notch instead of from it.)
         level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         isMovable = false
-        isFloatingPanel = true
         hidesOnDeactivate = false
         ignoresMouseEvents = true
         isReleasedWhenClosed = false
@@ -35,6 +37,9 @@ final class NotchPanel: NSPanel {
     // open. Non-activating, so the app you were using stays the active app.
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// macOS nudges windows out from under the menu bar; this one belongs there.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, keyHandler?(event) == true { return }

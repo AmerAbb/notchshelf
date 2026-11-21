@@ -88,7 +88,9 @@ struct NotchRootView: View {
     private var shapeSize: CGSize {
         let notch = model.notchSize
         switch model.mode {
-        case .hidden: return notch
+        // A touch smaller than the hardware notch, so the closed shape is
+        // always fully behind it whatever its exact corner radius.
+        case .hidden: return CGSize(width: notch.width - 6, height: notch.height - 2)
         case .peek: return CGSize(width: notch.width + 2 * NotchModel.peekEar + 12, height: notch.height)
         case .expanded: return model.expandedSize
         }
