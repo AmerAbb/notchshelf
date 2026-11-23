@@ -11,9 +11,9 @@ public final class ShelfStore {
     public private(set) var items: [ShelfItem] = []
     public let directory: URL
 
-    /// The shelf's "day" starts at this hour, not midnight, so a screenshot
-    /// taken at 11:58 PM isn't swept two minutes later.
-    public nonisolated static let dayStartHour = 4
+    /// How long an unpinned item stays. Measured from when it was added, so a
+    /// late-night screenshot gets the same day as any other.
+    public nonisolated static let lifetime: TimeInterval = 24 * 60 * 60
 
     @ObservationIgnored private let manifestURL: URL
     @ObservationIgnored private let now: () -> Date
@@ -148,23 +148,16 @@ public final class ShelfStore {
         remove(Set(items.filter { includingPinned || !$0.pinned }.map(\.id)))
     }
 
-    /// The daily sweep: removes unpinned items added before the start of the
-    /// current shelf day. Returns how many went.
+    /// The sweep: removes unpinned items that have been on the shelf for a
+    /// day or more. It runs whenever the app gets the chance (launch, wake,
+    /// once a minute), so the Mac needn't be awake at any particular time.
+    /// Returns how many went.
     @discardableResult
     public func purgeExpired() -> Int {
-        let cutoff = Self.dayStart(containing: now())
-        let expired = items.filter { !$0.pinned && $0.addedAt < cutoff }
+        let cutoff = now().addingTimeInterval(-Self.lifetime)
+        let expired = items.filter { !$0.pinned && $0.addedAt <= cutoff }
         remove(Set(expired.map(\.id)))
         return expired.count
-    }
-
-    /// The most recent `dayStartHour` boundary at or before `date`.
-    public nonisolated static func dayStart(containing date: Date, calendar: Calendar = .current) -> Date {
-        var components = calendar.dateComponents([.year, .month, .day], from: date)
-        components.hour = dayStartHour
-        guard let boundary = calendar.date(from: components) else { return date }
-        if boundary <= date { return boundary }
-        return calendar.date(byAdding: .day, value: -1, to: boundary) ?? boundary
     }
 
     // MARK: Disk

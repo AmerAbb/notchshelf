@@ -222,7 +222,7 @@ final class NotchModel {
             })
         }
         if !many {
-            menu.addItem(ActionMenuItem(item.pinned ? "Unpin" : "Pin (Keep Past Today)", symbol: item.pinned ? "pin.slash" : "pin") { [weak self] in
+            menu.addItem(ActionMenuItem(item.pinned ? "Unpin" : "Pin (Keep Past a Day)", symbol: item.pinned ? "pin.slash" : "pin") { [weak self] in
                 self?.togglePin(item)
             })
         }

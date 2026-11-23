@@ -62,28 +62,26 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertEqual(Set(store.items.map(\.fileName)), ["a.png", "a 2.png"])
     }
 
-    func testDayStartsAtFourInTheMorning() {
-        XCTAssertEqual(ShelfStore.dayStart(containing: date("2026-11-21 10:00")), date("2026-11-21 04:00"))
-        XCTAssertEqual(ShelfStore.dayStart(containing: date("2026-11-21 01:30")), date("2026-11-20 04:00"))
-        XCTAssertEqual(ShelfStore.dayStart(containing: date("2026-11-21 04:00")), date("2026-11-21 04:00"))
-    }
-
-    func testSweepRemovesYesterdayButKeepsPinnedAndToday() throws {
+    func testSweepRemovesItemsADayOldButKeepsPinned() throws {
         let store = makeStore()
-        clock = date("2026-11-20 15:00")
-        let old = try store.ingest(fileAt: try makeFile("old.png"), as: .screenshot, move: true)
+        clock = date("2026-11-20 02:00")
+        let lateNight = try store.ingest(fileAt: try makeFile("late night.png"), as: .screenshot, move: true)
         let pinned = try store.ingest(fileAt: try makeFile("pinned.png"), as: .screenshot, move: true)
         store.setPinned(true, for: pinned.id)
-        clock = date("2026-11-20 23:58")
-        let late = try store.ingest(fileAt: try makeFile("late.png"), as: .screenshot, move: true)
+        clock = date("2026-11-20 15:00")
+        let afternoon = try store.ingest(fileAt: try makeFile("afternoon.png"), as: .screenshot, move: true)
 
-        clock = date("2026-11-21 00:30")
-        XCTAssertEqual(store.purgeExpired(), 0, "nothing goes before 4 AM")
+        clock = date("2026-11-21 01:59")
+        XCTAssertEqual(store.purgeExpired(), 0, "nothing is a day old yet")
 
-        clock = date("2026-11-21 09:00")
-        XCTAssertEqual(store.purgeExpired(), 2)
-        XCTAssertEqual(store.items.map(\.id), [pinned.id])
-        XCTAssertEqual(Set(discarded), [old.fileName, late.fileName])
+        clock = date("2026-11-21 02:00")
+        XCTAssertEqual(store.purgeExpired(), 1, "a day old exactly")
+        XCTAssertEqual(discarded, [lateNight.fileName])
+
+        clock = date("2026-11-21 15:00")
+        XCTAssertEqual(store.purgeExpired(), 1)
+        XCTAssertEqual(discarded, [lateNight.fileName, afternoon.fileName])
+        XCTAssertEqual(store.items.map(\.id), [pinned.id], "pinned items stay however old")
     }
 
     func testClearKeepsPinnedUnlessAsked() throws {

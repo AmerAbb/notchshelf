@@ -49,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         setUpStatusItem()
 
-        // Once a minute: the daily sweep, and pick up a changed screenshot
+        // Once a minute: sweep out anything a day old, and pick up a changed screenshot
         // folder (System Settings or ⇧⌘5 → Options → Save to).
         sweepTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [unowned self] _ in
             MainActor.assumeIsolated { periodic() }

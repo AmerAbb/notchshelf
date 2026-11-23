@@ -2,7 +2,7 @@
 
 A shelf that hangs from the MacBook notch. Take a screenshot and it lands there;
 switch to whatever app you wanted it in, hover the notch, drag it out. Nothing
-piles up in your screenshots folder, and the shelf empties itself every day.
+piles up in your screenshots folder, and anything on the shelf for a day goes by itself.
 
 ![icon](App/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png)
 
@@ -34,9 +34,10 @@ never clean.
 - **Blur before sharing.** The checkerboard button (or right-click → Blur Part
   of It…) opens an editor; drag boxes over tokens, emails or customer data,
   then Save. The shelf keeps the pixelated copy.
-- **Pin** what you need tomorrow. Everything else is cleared at **4 AM** (not
-  midnight, so a late-night screenshot isn't swept two minutes later).
-- **Drop any file on the notch** to park it there until tomorrow. The original
+- **Pin** what you want to keep. Everything else is cleared once it's been on
+  the shelf for **24 hours**. The check runs at launch, on wake and every
+  minute, so the Mac doesn't need to be awake at any particular time.
+- **Drop any file on the notch** to park it there for a day. The original
   stays where it was.
 - **⌃⌥⌘V** copies the newest screenshot without opening anything.
 

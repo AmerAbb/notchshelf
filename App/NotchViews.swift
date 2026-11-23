@@ -171,7 +171,7 @@ struct ShelfView: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .strokeBorder(Color.white.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                     Label(
-                        model.isDraggingOut ? "Drop to put it back" : "Drop to park it until tomorrow",
+                        model.isDraggingOut ? "Drop to put it back" : "Drop to park it for a day",
                         systemImage: model.isDraggingOut ? "arrow.uturn.backward" : "tray.and.arrow.down"
                     )
                         .font(.system(size: 13, weight: .semibold))
@@ -227,7 +227,7 @@ struct EmptyShelf: View {
             Text("Screenshots land here")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-            Text("Take one with ⇧⌘4, or drop any file here to park it until tomorrow")
+            Text("Take one with ⇧⌘4, or drop any file here to park it for a day")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.5))
         }
@@ -337,7 +337,7 @@ struct ThumbnailCell: View {
                     CellButton(symbol: "xmark", help: "Remove") { model.remove([item]) }
                 }
                 if showControls || item.pinned {
-                    CellButton(symbol: item.pinned ? "pin.fill" : "pin", help: item.pinned ? "Unpin" : "Pin: keep past today") {
+                    CellButton(symbol: item.pinned ? "pin.fill" : "pin", help: item.pinned ? "Unpin" : "Pin: keep it past a day") {
                         model.togglePin(item)
                     }
                 }
